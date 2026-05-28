@@ -28,9 +28,36 @@ hound = "3.5"
 [dev-dependencies]
 proptest = "1.4"
 env_logger = "0.10"
+criterion = { version = "0.5", features = ["html_reports"] }
+rand = "0.8"
 
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-panic = "abort"
+
+[[bench]]
+name = "primitives"
+harness = false
+path = "benches/primitives_bench.rs"
+
+[[bench]]
+name = "quantization"
+harness = false
+path = "benches/quantization_bench.rs"
+
+[[bench]]
+name = "subband"
+harness = false
+path = "benches/subband_bench.rs"
+
+[[bench]]
+name = "mdct"
+harness = false
+path = "benches/mdct_bench.rs"
+
+[[bench]]
+name = "bitstream"
+harness = false
+path = "benches/bitstream_bench.rs"
+
+[[bench]]
+name = "encode_pipeline"
+harness = false
+path = "benches/encode_pipeline_bench.rs"

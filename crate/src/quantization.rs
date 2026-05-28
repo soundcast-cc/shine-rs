@@ -87,14 +87,7 @@ pub fn shine_inner_loop(
         }
 
         // Process with current step size
-        {
-            let cod_info = &mut config.side_info.gr[gr as usize].ch[ch as usize].tt;
-            calc_runlen(ix, cod_info); // rzero,count1,big_values
-            bits = count1_bitcount(ix, cod_info); // count1_table selection
-            _c1bits = bits;
-        }
-
-        // Subdivide and select tables - avoid borrowing conflicts by separating operations
+        // Subdivide and select tables
         {
             let cod_info = &mut config.side_info.gr[gr as usize].ch[ch as usize].tt;
             calc_runlen(ix, cod_info); // rzero,count1,big_values

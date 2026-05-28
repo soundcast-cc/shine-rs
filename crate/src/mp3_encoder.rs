@@ -9,7 +9,6 @@ use crate::encoder::{
 };
 use crate::error::{ConfigError, EncoderError, InputDataError};
 use crate::types::ShineGlobalConfig;
-use std::collections::VecDeque;
 
 /// 支持的采样率 (Hz)
 pub const SUPPORTED_SAMPLE_RATES: &[u32] = &[
@@ -188,7 +187,9 @@ pub struct Mp3Encoder {
     /// 每次编码需要的样本数
     samples_per_frame: usize,
     /// 输入缓冲区
-    input_buffer: VecDeque<i16>,
+    input_buffer: Vec<i16>,
+    /// 缓冲区读取位置
+    input_pos: usize,
     /// 是否已完成编码
     finished: bool,
 }
@@ -213,7 +214,8 @@ impl Mp3Encoder {
             config: global_config,
             encoder_config: config,
             samples_per_frame,
-            input_buffer: VecDeque::new(),
+            input_buffer: Vec::new(),
+            input_pos: 0,
             finished: false,
         })
     }
@@ -253,22 +255,29 @@ impl Mp3Encoder {
         }
 
         // 将数据添加到缓冲区
-        self.input_buffer.extend(pcm_data);
+        self.input_buffer.extend_from_slice(pcm_data);
 
         let mut output_frames = Vec::new();
 
-        // 处理完整的帧
-        while self.input_buffer.len() >= self.samples_per_frame {
-            let frame_data: Vec<i16> = self.input_buffer.drain(..self.samples_per_frame).collect();
+        // 处理完整的帧 - 使用偏移指针避免复制
+        while self.input_pos + self.samples_per_frame <= self.input_buffer.len() {
+            let ptr = unsafe { self.input_buffer.as_ptr().add(self.input_pos) };
 
-            // 调用底层编码函数
             let (mp3_data, written) =
-                unsafe { shine_encode_buffer_interleaved(&mut self.config, frame_data.as_ptr()) }
+                unsafe { shine_encode_buffer_interleaved(&mut self.config, ptr) }
                     .map_err(EncoderError::Encoding)?;
+
+            self.input_pos += self.samples_per_frame;
 
             if written > 0 {
                 output_frames.push(mp3_data[..written].to_vec());
             }
+        }
+
+        // 定期压缩缓冲区以避免无界增长
+        if self.input_pos > self.samples_per_frame * 4 {
+            self.input_buffer.drain(..self.input_pos);
+            self.input_pos = 0;
         }
 
         Ok(output_frames)
@@ -353,16 +362,16 @@ impl Mp3Encoder {
         // 处理剩余的不完整帧（用零填充）
         let mut final_output = Vec::new();
 
-        if !self.input_buffer.is_empty() {
+        let remaining = self.input_buffer.len() - self.input_pos;
+        if remaining > 0 {
             // 用零填充到完整帧大小
-            while self.input_buffer.len() < self.samples_per_frame {
-                self.input_buffer.push_back(0);
-            }
+            self.input_buffer
+                .resize(self.input_pos + self.samples_per_frame, 0);
 
-            let frame_data: Vec<i16> = self.input_buffer.drain(..).collect();
+            let ptr = unsafe { self.input_buffer.as_ptr().add(self.input_pos) };
 
             let (mp3_data, written) =
-                unsafe { shine_encode_buffer_interleaved(&mut self.config, frame_data.as_ptr()) }
+                unsafe { shine_encode_buffer_interleaved(&mut self.config, ptr) }
                     .map_err(EncoderError::Encoding)?;
 
             if written > 0 {
@@ -382,7 +391,7 @@ impl Mp3Encoder {
 
     /// 获取缓冲区中剩余的样本数
     pub fn buffered_samples(&self) -> usize {
-        self.input_buffer.len()
+        self.input_buffer.len() - self.input_pos
     }
 
     /// 检查编码器是否已完成

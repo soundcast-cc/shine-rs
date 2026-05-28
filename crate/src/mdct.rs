@@ -6,48 +6,28 @@
 //! in ref/shine/src/lib/l3mdct.c
 
 use crate::types::{ShineGlobalConfig, GRANULE_SIZE, SBLIMIT};
-use lazy_static::lazy_static;
 use std::f64::consts::PI;
 
 /// PI/36 constant for MDCT calculations (matches shine PI36)
 const PI36: f64 = PI / 36.0;
 
-/// Aliasing reduction coefficients (matches shine's MDCT_CA and MDCT_CS macros)
-/// These are table B.9 coefficients for aliasing reduction from the ISO standard
-///
-/// MDCT_CA macro: coef / sqrt(1.0 + (coef * coef)) * 0x7fffffff
-#[inline]
-fn mdct_ca(coef: f64) -> i32 {
-    (coef / (1.0 + coef * coef).sqrt() * 0x7fffffff as f64) as i32
-}
+const MDCT_CA0: i32 = -1104871221;
+const MDCT_CA1: i32 = -1013036688;
+const MDCT_CA2: i32 = -672972958;
+const MDCT_CA3: i32 = -390655621;
+const MDCT_CA4: i32 = -203096531;
+const MDCT_CA5: i32 = -87972919;
+const MDCT_CA6: i32 = -30491193;
+const MDCT_CA7: i32 = -7945635;
+const MDCT_CS0: i32 = 1841452035;
+const MDCT_CS1: i32 = 1893526520;
+const MDCT_CS2: i32 = 2039311994;
+const MDCT_CS3: i32 = 2111652007;
+const MDCT_CS4: i32 = 2137858230;
+const MDCT_CS5: i32 = 2145680959;
+const MDCT_CS6: i32 = 2147267170;
+const MDCT_CS7: i32 = 2147468947;
 
-/// MDCT_CS macro: 1.0 / sqrt(1.0 + (coef * coef)) * 0x7fffffff
-#[inline]
-fn mdct_cs(coef: f64) -> i32 {
-    (1.0 / (1.0 + coef * coef).sqrt() * 0x7fffffff as f64) as i32
-}
-
-lazy_static! {
-    /// Aliasing reduction CA coefficients (matches shine MDCT_CA0-7)
-    static ref MDCT_CA0: i32 = mdct_ca(-0.6);
-    static ref MDCT_CA1: i32 = mdct_ca(-0.535);
-    static ref MDCT_CA2: i32 = mdct_ca(-0.33);
-    static ref MDCT_CA3: i32 = mdct_ca(-0.185);
-    static ref MDCT_CA4: i32 = mdct_ca(-0.095);
-    static ref MDCT_CA5: i32 = mdct_ca(-0.041);
-    static ref MDCT_CA6: i32 = mdct_ca(-0.0142);
-    static ref MDCT_CA7: i32 = mdct_ca(-0.0037);
-
-    /// Aliasing reduction CS coefficients (matches shine MDCT_CS0-7)
-    static ref MDCT_CS0: i32 = mdct_cs(-0.6);
-    static ref MDCT_CS1: i32 = mdct_cs(-0.535);
-    static ref MDCT_CS2: i32 = mdct_cs(-0.33);
-    static ref MDCT_CS3: i32 = mdct_cs(-0.185);
-    static ref MDCT_CS4: i32 = mdct_cs(-0.095);
-    static ref MDCT_CS5: i32 = mdct_cs(-0.041);
-    static ref MDCT_CS6: i32 = mdct_cs(-0.0142);
-    static ref MDCT_CS7: i32 = mdct_cs(-0.0037);
-}
 /// Multiplication macros matching shine's mult_noarch_gcc.h
 /// These implement fixed-point arithmetic operations
 ///
@@ -254,49 +234,49 @@ pub fn shine_mdct_sub(config: &mut ShineGlobalConfig, stride: i32) {
                     // Get current values (band * 18 + 0 simplified to band * 18)
                     let curr_0 = config.mdct_freq[ch_idx][gr_idx][band * 18];
                     let prev_17 = config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 17];
-                    let (new_curr_0, new_prev_17) = cmuls(curr_0, prev_17, *MDCT_CS0, *MDCT_CA0);
+                    let (new_curr_0, new_prev_17) = cmuls(curr_0, prev_17, MDCT_CS0, MDCT_CA0);
                     config.mdct_freq[ch_idx][gr_idx][band * 18] = new_curr_0;
                     config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 17] = new_prev_17;
 
                     let curr_1 = config.mdct_freq[ch_idx][gr_idx][band * 18 + 1];
                     let prev_16 = config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 16];
-                    let (new_curr_1, new_prev_16) = cmuls(curr_1, prev_16, *MDCT_CS1, *MDCT_CA1);
+                    let (new_curr_1, new_prev_16) = cmuls(curr_1, prev_16, MDCT_CS1, MDCT_CA1);
                     config.mdct_freq[ch_idx][gr_idx][band * 18 + 1] = new_curr_1;
                     config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 16] = new_prev_16;
 
                     let curr_2 = config.mdct_freq[ch_idx][gr_idx][band * 18 + 2];
                     let prev_15 = config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 15];
-                    let (new_curr_2, new_prev_15) = cmuls(curr_2, prev_15, *MDCT_CS2, *MDCT_CA2);
+                    let (new_curr_2, new_prev_15) = cmuls(curr_2, prev_15, MDCT_CS2, MDCT_CA2);
                     config.mdct_freq[ch_idx][gr_idx][band * 18 + 2] = new_curr_2;
                     config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 15] = new_prev_15;
 
                     let curr_3 = config.mdct_freq[ch_idx][gr_idx][band * 18 + 3];
                     let prev_14 = config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 14];
-                    let (new_curr_3, new_prev_14) = cmuls(curr_3, prev_14, *MDCT_CS3, *MDCT_CA3);
+                    let (new_curr_3, new_prev_14) = cmuls(curr_3, prev_14, MDCT_CS3, MDCT_CA3);
                     config.mdct_freq[ch_idx][gr_idx][band * 18 + 3] = new_curr_3;
                     config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 14] = new_prev_14;
 
                     let curr_4 = config.mdct_freq[ch_idx][gr_idx][band * 18 + 4];
                     let prev_13 = config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 13];
-                    let (new_curr_4, new_prev_13) = cmuls(curr_4, prev_13, *MDCT_CS4, *MDCT_CA4);
+                    let (new_curr_4, new_prev_13) = cmuls(curr_4, prev_13, MDCT_CS4, MDCT_CA4);
                     config.mdct_freq[ch_idx][gr_idx][band * 18 + 4] = new_curr_4;
                     config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 13] = new_prev_13;
 
                     let curr_5 = config.mdct_freq[ch_idx][gr_idx][band * 18 + 5];
                     let prev_12 = config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 12];
-                    let (new_curr_5, new_prev_12) = cmuls(curr_5, prev_12, *MDCT_CS5, *MDCT_CA5);
+                    let (new_curr_5, new_prev_12) = cmuls(curr_5, prev_12, MDCT_CS5, MDCT_CA5);
                     config.mdct_freq[ch_idx][gr_idx][band * 18 + 5] = new_curr_5;
                     config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 12] = new_prev_12;
 
                     let curr_6 = config.mdct_freq[ch_idx][gr_idx][band * 18 + 6];
                     let prev_11 = config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 11];
-                    let (new_curr_6, new_prev_11) = cmuls(curr_6, prev_11, *MDCT_CS6, *MDCT_CA6);
+                    let (new_curr_6, new_prev_11) = cmuls(curr_6, prev_11, MDCT_CS6, MDCT_CA6);
                     config.mdct_freq[ch_idx][gr_idx][band * 18 + 6] = new_curr_6;
                     config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 11] = new_prev_11;
 
                     let curr_7 = config.mdct_freq[ch_idx][gr_idx][band * 18 + 7];
                     let prev_10 = config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 10];
-                    let (new_curr_7, new_prev_10) = cmuls(curr_7, prev_10, *MDCT_CS7, *MDCT_CA7);
+                    let (new_curr_7, new_prev_10) = cmuls(curr_7, prev_10, MDCT_CS7, MDCT_CA7);
                     config.mdct_freq[ch_idx][gr_idx][band * 18 + 7] = new_curr_7;
                     config.mdct_freq[ch_idx][gr_idx][(band - 1) * 18 + 10] = new_prev_10;
 

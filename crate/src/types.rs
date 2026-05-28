@@ -72,9 +72,9 @@ pub struct L3Loop {
     /// Magnitudes of the spectral values
     pub xr: *mut i32,
     /// xr squared
-    pub xrsq: Box<[i32; GRANULE_SIZE]>, // Move to heap
+    pub xrsq: [i32; GRANULE_SIZE],
     /// xr absolute
-    pub xrabs: Box<[i32; GRANULE_SIZE]>, // Move to heap
+    pub xrabs: [i32; GRANULE_SIZE],
     /// Maximum of xrabs array
     pub xrmax: i32,
     /// Total energy per granule
@@ -97,8 +97,8 @@ impl Default for L3Loop {
     fn default() -> Self {
         Self {
             xr: std::ptr::null_mut(),
-            xrsq: Box::new([0; GRANULE_SIZE]),
-            xrabs: Box::new([0; GRANULE_SIZE]),
+            xrsq: [0; GRANULE_SIZE],
+            xrabs: [0; GRANULE_SIZE],
             xrmax: 0,
             en_tot: [0; MAX_GRANULES],
             en: [[0; 21]; MAX_GRANULES],
@@ -134,7 +134,7 @@ impl Default for Mdct {
 pub struct Subband {
     pub off: [i32; MAX_CHANNELS],
     pub fl: [[i32; 64]; SBLIMIT],
-    pub x: Box<[[i32; HAN_SIZE]; MAX_CHANNELS]>, // Move to heap
+    pub x: [[i32; HAN_SIZE]; MAX_CHANNELS],
 }
 
 impl Default for Subband {
@@ -142,7 +142,7 @@ impl Default for Subband {
         Self {
             off: [0; MAX_CHANNELS],
             fl: [[0; 64]; SBLIMIT],
-            x: Box::new([[0; HAN_SIZE]; MAX_CHANNELS]),
+            x: [[0; HAN_SIZE]; MAX_CHANNELS],
         }
     }
 }
@@ -236,13 +236,13 @@ impl Default for ShineSideInfo {
 #[repr(C)]
 #[derive(Debug)]
 pub struct ShinePsyRatio {
-    pub l: Box<[[[f64; 21]; MAX_CHANNELS]; MAX_GRANULES]>, // Move to heap
+    pub l: [[[f64; 21]; MAX_CHANNELS]; MAX_GRANULES],
 }
 
 impl Default for ShinePsyRatio {
     fn default() -> Self {
         Self {
-            l: Box::new([[[0.0; 21]; MAX_CHANNELS]; MAX_GRANULES]),
+            l: [[[0.0; 21]; MAX_CHANNELS]; MAX_GRANULES],
         }
     }
 }
@@ -252,13 +252,13 @@ impl Default for ShinePsyRatio {
 #[repr(C)]
 #[derive(Debug)]
 pub struct ShinePsyXmin {
-    pub l: Box<[[[f64; 21]; MAX_CHANNELS]; MAX_GRANULES]>, // Move to heap
+    pub l: [[[f64; 21]; MAX_CHANNELS]; MAX_GRANULES],
 }
 
 impl Default for ShinePsyXmin {
     fn default() -> Self {
         Self {
-            l: Box::new([[[0.0; 21]; MAX_CHANNELS]; MAX_GRANULES]),
+            l: [[[0.0; 21]; MAX_CHANNELS]; MAX_GRANULES],
         }
     }
 }
@@ -269,16 +269,16 @@ impl Default for ShinePsyXmin {
 #[derive(Debug)]
 pub struct ShineScalefac {
     /// Long block scale factors [granule][channel][scalefactor_band]
-    pub l: Box<[[[i32; 22]; MAX_CHANNELS]; MAX_GRANULES]>, // Move to heap
+    pub l: [[[i32; 22]; MAX_CHANNELS]; MAX_GRANULES],
     /// Short block scale factors [granule][channel][scalefactor_band][window]
-    pub s: Box<[[[[i32; 3]; 13]; MAX_CHANNELS]; MAX_GRANULES]>, // Move to heap
+    pub s: [[[[i32; 3]; 13]; MAX_CHANNELS]; MAX_GRANULES],
 }
 
 impl Default for ShineScalefac {
     fn default() -> Self {
         Self {
-            l: Box::new([[[0; 22]; MAX_CHANNELS]; MAX_GRANULES]),
-            s: Box::new([[[[0; 3]; 13]; MAX_CHANNELS]; MAX_GRANULES]),
+            l: [[[0; 22]; MAX_CHANNELS]; MAX_GRANULES],
+            s: [[[[0; 3]; 13]; MAX_CHANNELS]; MAX_GRANULES],
         }
     }
 }
@@ -294,9 +294,9 @@ pub struct ShineGlobalConfig {
     pub sideinfo_len: i32,
     pub mean_bits: i32,
     pub ratio: ShinePsyRatio,
-    pub scalefactor: Box<ShineScalefac>, // Move to heap
+    pub scalefactor: ShineScalefac,
     pub buffer: [*mut i16; MAX_CHANNELS],
-    pub pe: Box<[[f64; MAX_GRANULES]; MAX_CHANNELS]>, // Move to heap
+    pub pe: [[f64; MAX_GRANULES]; MAX_CHANNELS],
     pub l3_enc: Box<[[[i32; GRANULE_SIZE]; MAX_GRANULES]; MAX_CHANNELS]>, // Move to heap
     pub l3_sb_sample: Box<[[[[i32; SBLIMIT]; 18]; MAX_GRANULES + 1]; MAX_CHANNELS]>, // Move to heap
     pub mdct_freq: Box<[[[i32; GRANULE_SIZE]; MAX_GRANULES]; MAX_CHANNELS]>, // Move to heap
@@ -341,9 +341,9 @@ impl ShineGlobalConfig {
             sideinfo_len: 0,
             mean_bits: 0,
             ratio: ShinePsyRatio::default(),
-            scalefactor: Box::new(ShineScalefac::default()), // Allocate on heap
+            scalefactor: ShineScalefac::default(),
             buffer: [std::ptr::null_mut(); MAX_CHANNELS],
-            pe: Box::new([[0.0; MAX_GRANULES]; MAX_CHANNELS]), // Allocate on heap
+            pe: [[0.0; MAX_GRANULES]; MAX_CHANNELS],
             l3_enc: Box::new([[[0; GRANULE_SIZE]; MAX_GRANULES]; MAX_CHANNELS]), // Allocate on heap
             l3_sb_sample: Box::new([[[[0; SBLIMIT]; 18]; MAX_GRANULES + 1]; MAX_CHANNELS]), // Allocate on heap
             mdct_freq: Box::new([[[0; GRANULE_SIZE]; MAX_GRANULES]; MAX_CHANNELS]), // Allocate on heap
