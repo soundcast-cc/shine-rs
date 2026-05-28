@@ -247,28 +247,28 @@ fn encode_main_data(config: &mut ShineGlobalConfig) -> EncodingResult<()> {
 
             // Write scale factors
             if gr == 0 || scfsi[0] == 0 {
-                (0..6).try_for_each(|sfb| {
+                for sfb in 0..6 {
                     let sf_val = config.scalefactor.l[gr][ch][sfb];
-                    config.bs.put_bits(sf_val as u32, slen1)
-                })?;
+                    config.bs.put_bits(sf_val as u32, slen1)?;
+                }
             }
             if gr == 0 || scfsi[1] == 0 {
-                (6..11).try_for_each(|sfb| {
+                for sfb in 6..11 {
                     let sf_val = config.scalefactor.l[gr][ch][sfb];
-                    config.bs.put_bits(sf_val as u32, slen1)
-                })?;
+                    config.bs.put_bits(sf_val as u32, slen1)?;
+                }
             }
             if gr == 0 || scfsi[2] == 0 {
-                (11..16).try_for_each(|sfb| {
+                for sfb in 11..16 {
                     let sf_val = config.scalefactor.l[gr][ch][sfb];
-                    config.bs.put_bits(sf_val as u32, slen2)
-                })?;
+                    config.bs.put_bits(sf_val as u32, slen2)?;
+                }
             }
             if gr == 0 || scfsi[3] == 0 {
-                (16..21).try_for_each(|sfb| {
+                for sfb in 16..21 {
                     let sf_val = config.scalefactor.l[gr][ch][sfb];
-                    config.bs.put_bits(sf_val as u32, slen2)
-                })?;
+                    config.bs.put_bits(sf_val as u32, slen2)?;
+                }
             }
 
             // Pass reference to avoid cloning GrInfo
@@ -326,9 +326,11 @@ fn encode_side_info(config: &mut ShineGlobalConfig) -> EncodingResult<()> {
 
     // Write SCFSI (only for MPEG-I)
     if config.mpeg.version == 3 {
-        (0..config.wave.channels as usize).try_for_each(|ch| {
-            (0..4).try_for_each(|scfsi_band| config.bs.put_bits(si.scfsi[ch][scfsi_band], 1))
-        })?;
+        for ch in 0..config.wave.channels as usize {
+            for scfsi_band in 0..4 {
+                config.bs.put_bits(si.scfsi[ch][scfsi_band], 1)?;
+            }
+        }
     }
 
     // Write granule information
@@ -349,7 +351,9 @@ fn encode_side_info(config: &mut ShineGlobalConfig) -> EncodingResult<()> {
 
             config.bs.put_bits(0, 1)?; // Window switching flag (always 0 for long blocks)
 
-            (0..3).try_for_each(|region| config.bs.put_bits(gi.table_select[region], 5))?;
+            for region in 0..3 {
+                config.bs.put_bits(gi.table_select[region], 5)?;
+            }
 
             config.bs.put_bits(gi.region0_count, 4)?;
             config.bs.put_bits(gi.region1_count, 3)?;

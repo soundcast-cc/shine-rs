@@ -91,6 +91,8 @@ pub struct L3Loop {
     pub steptabi: [i32; 128],
     /// x**(3/4) for x = 0..9999
     pub int2idx: Box<[i32; 10000]>, // Move to heap
+    /// Previous frame's optimal step size for search seeding
+    pub last_stepsize: i32,
 }
 
 impl Default for L3Loop {
@@ -107,6 +109,7 @@ impl Default for L3Loop {
             steptab: [0.0; 128],
             steptabi: [0; 128],
             int2idx: Box::new([0; 10000]),
+            last_stepsize: 0,
         }
     }
 }

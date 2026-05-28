@@ -13,6 +13,7 @@ pub mod mdct;
 pub mod mp3_encoder;
 pub mod quantization;
 pub mod reservoir;
+pub mod simd;
 pub mod subband;
 pub mod tables;
 pub mod types;

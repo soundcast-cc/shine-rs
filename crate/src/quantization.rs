@@ -225,9 +225,9 @@ pub fn shine_iteration_loop(config: &mut ShineGlobalConfig) {
 
             // reset of iteration variables
             config.scalefactor.l[gr as usize][ch as usize].fill(0);
-            config.scalefactor.s[gr as usize][ch as usize]
-                .iter_mut()
-                .for_each(|row| row.fill(0));
+            for row in &mut config.scalefactor.s[gr as usize][ch as usize] {
+                row.fill(0);
+            }
 
             // Reset cod_info values
             {
@@ -525,28 +525,22 @@ pub fn quantize_with_l3loop(
     // this speeds up the early calls to bin_search_StepSize
     if mulr(l3loop.xrmax, scalei) > 165140 {
         // 8192**(4/3)
-        max = 16384; // no point in continuing, stepsize not big enough
-    } else {
-        for (i, ix_val) in ix.iter_mut().enumerate().take(GRANULE_SIZE) {
-            // This calculation is very sensitive. The multiply must round its
-            // result or bad things happen to the quality.
-            let ln = mulr(labs(unsafe { *l3loop.xr.add(i) }), scalei);
+        return 16384; // no point in continuing, stepsize not big enough
+    }
 
-            if ln < 10000 {
-                // ln < 10000 catches most values
-                *ix_val = l3loop.int2idx[ln as usize]; // quick look up method
-            } else {
-                // outside table range so have to do it using floats
-                scale = l3loop.steptab[(stepsize + 127).clamp(0, 127) as usize]; // 2**(-stepsize/4)
-                dbl = (l3loop.xrabs[i] as f64) * scale * 4.656612875e-10; // 0x7fffffff
-                *ix_val = (dbl.sqrt().sqrt() * dbl.sqrt()) as i32; // dbl**(3/4)
-            }
+    for (i, ix_val) in ix.iter_mut().enumerate().take(GRANULE_SIZE) {
+        let ln = mulr(labs(unsafe { *l3loop.xr.add(i) }), scalei);
 
-            // calculate ixmax while we're here
-            // note. ix cannot be negative
-            if max < *ix_val {
-                max = *ix_val;
-            }
+        if (0..10000).contains(&ln) {
+            *ix_val = l3loop.int2idx[(ln as usize).min(9999)];
+        } else {
+            scale = l3loop.steptab[(stepsize + 127).clamp(0, 127) as usize];
+            dbl = (l3loop.xrabs[i] as f64) * scale * 4.656612875e-10;
+            *ix_val = (dbl.sqrt().sqrt() * dbl.sqrt()) as i32;
+        }
+
+        if max < *ix_val {
+            max = *ix_val;
         }
     }
 
@@ -788,11 +782,7 @@ fn new_choose_table(ix: &[i32], begin: u32, end: u32) -> u32 {
         // try tables with no linbits
         choice[0] = (0..14)
             .rev()
-            .find(|&i| {
-                SHINE_HUFFMAN_TABLE
-                    .get(i)
-                    .is_some_and(|table| table.xlen > max as u32)
-            })
+            .find(|&i| SHINE_HUFFMAN_TABLE[i].xlen > max as u32)
             .unwrap_or(0) as u32;
 
         sum[0] = count_bit(ix, begin, end, choice[0]);
@@ -845,19 +835,11 @@ fn new_choose_table(ix: &[i32], begin: u32, end: u32) -> u32 {
         let max_linbits = max - 15;
 
         choice[0] = (15..24)
-            .find(|&i| {
-                SHINE_HUFFMAN_TABLE
-                    .get(i)
-                    .is_some_and(|table| table.linmax >= max_linbits as u32)
-            })
+            .find(|&i| SHINE_HUFFMAN_TABLE[i].linmax >= max_linbits as u32)
             .unwrap_or(15) as u32;
 
         choice[1] = (24..32)
-            .find(|&i| {
-                SHINE_HUFFMAN_TABLE
-                    .get(i)
-                    .is_some_and(|table| table.linmax >= max_linbits as u32)
-            })
+            .find(|&i| SHINE_HUFFMAN_TABLE[i].linmax >= max_linbits as u32)
             .unwrap_or(24) as u32;
 
         sum[0] = count_bit(ix, begin, end, choice[0]);
@@ -901,10 +883,7 @@ pub fn count_bit(ix: &[i32], start: u32, end: u32, table: u32) -> i32 {
         return 0;
     }
 
-    let h = match SHINE_HUFFMAN_TABLE.get(table_idx) {
-        Some(table) => table,
-        None => return 0,
-    };
+    let h = &SHINE_HUFFMAN_TABLE[table_idx as usize];
 
     let mut sum = 0;
     let ylen = h.ylen;
@@ -987,8 +966,12 @@ fn bin_search_step_size_with_samplerate(
     samplerate: i32,
     l3loop: &mut crate::types::L3Loop,
 ) -> i32 {
-    let mut next = -120;
-    let mut count = 120;
+    // Seed search range from previous frame's step size for faster convergence
+    let (mut next, mut count) = if l3loop.last_stepsize != 0 {
+        (l3loop.last_stepsize - 30, 60)
+    } else {
+        (-120, 120)
+    };
 
     loop {
         let half = count / 2;
@@ -1016,5 +999,6 @@ fn bin_search_step_size_with_samplerate(
         }
     }
 
+    l3loop.last_stepsize = next;
     next
 }
