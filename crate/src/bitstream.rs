@@ -75,17 +75,8 @@ impl BitstreamWriter {
         if self.cache_bits > n {
             // Cache has enough space for the new bits
             self.cache_bits -= n;
-
-            // Add safety check to prevent overflow
-            if self.cache_bits >= 0 && self.cache_bits < 32 {
-                let shifted_val = val << self.cache_bits;
-                self.cache |= shifted_val;
-            } else {
-                return Err(EncodingError::BitstreamError(format!(
-                    "Invalid cache_bits: {}",
-                    self.cache_bits
-                )));
-            }
+            let shifted_val = val << self.cache_bits;
+            self.cache |= shifted_val;
         } else {
             // Cache doesn't have enough space, need to flush and write to buffer
             // Ensure we have enough space in the buffer
@@ -98,23 +89,19 @@ impl BitstreamWriter {
                 self.data_size = new_size;
             }
 
-            // Match shine's logic exactly
             let remaining_n = n - self.cache_bits;
             self.cache |= val >> remaining_n;
 
-            // Write cache to buffer using SWAB32 equivalent (byte swap on little-endian)
-            let cache_bytes = self.cache.to_be_bytes();
+            // Write cache as big-endian u32 directly
             self.data[self.data_position as usize..self.data_position as usize + 4]
-                .copy_from_slice(&cache_bytes);
+                .copy_from_slice(&self.cache.to_be_bytes());
 
             self.data_position += 4;
             self.cache_bits = 32 - remaining_n;
 
-            // Match Shine's exact logic for setting new cache value
             // Prevent overflow when remaining_n is 0 or cache_bits is 0
             if remaining_n != 0 && self.cache_bits > 0 && self.cache_bits < 32 {
-                let new_cache = val << self.cache_bits;
-                self.cache = new_cache;
+                self.cache = val << self.cache_bits;
             } else {
                 self.cache = 0;
             }
@@ -218,21 +205,21 @@ impl Default for BitstreamWriter {
 /// It will write the encoded audio to the bitstream.
 pub fn format_bitstream(config: &mut ShineGlobalConfig) -> EncodingResult<()> {
     // Apply sign correction to quantized values (matches shine exactly)
-    (0..config.wave.channels as usize).for_each(|ch| {
-        (0..config.mpeg.granules_per_frame as usize).for_each(|gr| {
+    for ch in 0..config.wave.channels as usize {
+        for gr in 0..config.mpeg.granules_per_frame as usize {
+            let end = {
+                let gi = &config.side_info.gr[gr].ch[ch].tt;
+                ((gi.big_values * 2 + gi.count1 * 4) as usize).min(GRANULE_SIZE)
+            };
             let pi = &mut config.l3_enc[ch][gr];
             let pr = &config.mdct_freq[ch][gr];
-
-            pi.iter_mut()
-                .zip(pr.iter())
-                .take(GRANULE_SIZE)
-                .for_each(|(pi_val, &pr_val)| {
-                    if pr_val < 0 && *pi_val > 0 {
-                        *pi_val *= -1;
-                    }
-                });
-        });
-    });
+            for i in 0..end {
+                if pr[i] < 0 && pi[i] > 0 {
+                    pi[i] *= -1;
+                }
+            }
+        }
+    }
 
     encode_side_info(config)?;
     encode_main_data(config)?;
@@ -284,10 +271,11 @@ fn encode_main_data(config: &mut ShineGlobalConfig) -> EncodingResult<()> {
                 })?;
             }
 
-            // Copy the granule info to avoid borrowing conflicts
-            let gi = config.side_info.gr[gr].ch[ch].tt.clone();
-            let ix = config.l3_enc[ch][gr];
-            huffman_code_bits(config, &ix, &gi)?;
+            // Pass reference to avoid cloning GrInfo
+            let gi = &config.side_info.gr[gr].ch[ch].tt;
+            let ix = &config.l3_enc[ch][gr];
+            let srate_idx = config.mpeg.samplerate_index;
+            huffman_code_bits(&mut config.bs, ix, gi, srate_idx)?;
         }
     }
 
@@ -381,12 +369,13 @@ fn encode_side_info(config: &mut ShineGlobalConfig) -> EncodingResult<()> {
 /// Huffman encode the quantized values (matches Huffmancodebits exactly)
 /// (ref/shine/src/lib/l3bitstream.c:123-165)
 fn huffman_code_bits(
-    config: &mut ShineGlobalConfig,
+    bs: &mut BitstreamWriter,
     ix: &[i32],
     gi: &GrInfo,
+    samplerate_index: i32,
 ) -> EncodingResult<()> {
-    let scalefac = &SHINE_SCALE_FACT_BAND_INDEX[config.mpeg.samplerate_index as usize];
-    let bits_start = config.bs.get_bits_count();
+    let scalefac = &SHINE_SCALE_FACT_BAND_INDEX[samplerate_index as usize];
+    let bits_start = bs.get_bits_count();
 
     // 1: Write the bigvalues
     let bigvalues = (gi.big_values << 1) as usize;
@@ -407,7 +396,7 @@ fn huffman_code_bits(
             let x = ix[i];
             let y = ix[i + 1];
 
-            huffman_code(&mut config.bs, table_index as usize, x, y)?;
+            huffman_code(bs, table_index as usize, x, y)?;
         }
         i += 2;
     }
@@ -423,12 +412,12 @@ fn huffman_code_bits(
         let x = ix[i + 2];
         let y = ix[i + 3];
 
-        huffman_coder_count1(&mut config.bs, h, v, w, x, y)?;
+        huffman_coder_count1(bs, h, v, w, x, y)?;
         i += 4;
     }
 
     // 3: Pad with stuffing bits if necessary
-    let bits_used = config.bs.get_bits_count() - bits_start;
+    let bits_used = bs.get_bits_count() - bits_start;
     let bits_available = gi.part2_3_length as i32 - gi.part2_length as i32;
     let stuffing_bits = bits_available - bits_used;
 
@@ -438,12 +427,10 @@ fn huffman_code_bits(
 
         // Due to the nature of the Huffman code tables, we will pad with ones
         for _ in 0..stuffing_words {
-            config.bs.put_bits(0xffffffff, 32)?;
+            bs.put_bits(0xffffffff, 32)?;
         }
         if remaining_bits > 0 {
-            config
-                .bs
-                .put_bits((1u32 << remaining_bits) - 1, remaining_bits)?;
+            bs.put_bits((1u32 << remaining_bits) - 1, remaining_bits)?;
         }
     }
 

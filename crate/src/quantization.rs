@@ -184,7 +184,7 @@ pub fn shine_iteration_loop(config: &mut ShineGlobalConfig) {
 
             // Precalculate the square, abs, and maximum, for use later on.
             config.l3loop.xrmax = 0;
-            for i in (0..GRANULE_SIZE).rev() {
+            for i in 0..GRANULE_SIZE {
                 let xr_val = unsafe { *config.l3loop.xr.add(i) };
                 config.l3loop.xrsq[i] = mulsr(xr_val, xr_val);
                 config.l3loop.xrabs[i] = labs(xr_val);
@@ -357,9 +357,7 @@ fn calc_scfsi(l3_xmin: &mut ShinePsyXmin, ch: i32, gr: i32, config: &mut ShineGl
     config.l3loop.xrmaxl[gr as usize] = config.l3loop.xrmax;
 
     // the total energy of the granule
-    let temp = (0..GRANULE_SIZE)
-        .rev()
-        .fold(0, |acc, i| acc + (config.l3loop.xrsq[i] >> 10));
+    let temp = (0..GRANULE_SIZE).fold(0, |acc, i| acc + (config.l3loop.xrsq[i] >> 10));
 
     config.l3loop.en_tot[gr as usize] = if temp != 0 {
         ((temp as f64 * 4.768371584e-7).ln() / LN_2) as i32 // 1024 / 0x7fffffff
