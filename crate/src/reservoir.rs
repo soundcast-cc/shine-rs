@@ -71,6 +71,7 @@ pub fn shine_resv_frame_end(config: &mut ShineGlobalConfig) {
     let mut stuffing_bits: i32;
     let mut over_bits: i32;
     let l3_side = &mut config.side_info;
+    l3_side.resv_drain = 0;
 
     // just in case mean_bits is odd, this is necessary...
     if (config.wave.channels == 2) && (config.mean_bits & 1) != 0 {

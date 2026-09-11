@@ -371,6 +371,7 @@ impl Mp3Encoder {
         }
 
         // 刷新编码器缓冲区
+        self.config.bs.flush().map_err(EncoderError::Encoding)?;
         let (flush_data, flush_written) = shine_flush(&mut self.config);
         if flush_written > 0 {
             final_output.extend_from_slice(&flush_data[..flush_written]);
