@@ -237,6 +237,13 @@ pub fn format_bitstream(config: &mut ShineGlobalConfig) -> EncodingResult<()> {
     encode_side_info(config)?;
     encode_main_data(config)?;
 
+    let mut remaining = config.side_info.resv_drain;
+    while remaining > 0 {
+        let bits = remaining.min(32);
+        config.bs.put_bits(0, bits)?;
+        remaining -= bits;
+    }
+
     Ok(())
 }
 
