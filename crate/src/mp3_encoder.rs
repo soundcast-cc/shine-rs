@@ -50,6 +50,8 @@ pub struct Mp3EncoderConfig {
     pub copyright: bool,
     /// 原创标志
     pub original: bool,
+    /// 启用 SIMD 加速（默认关闭）
+    pub use_simd: bool,
 }
 
 impl Default for Mp3EncoderConfig {
@@ -61,6 +63,7 @@ impl Default for Mp3EncoderConfig {
             stereo_mode: StereoMode::Stereo,
             copyright: false,
             original: true,
+            use_simd: false,
         }
     }
 }
@@ -104,6 +107,12 @@ impl Mp3EncoderConfig {
     /// 设置原创标志
     pub fn original(mut self, original: bool) -> Self {
         self.original = original;
+        self
+    }
+
+    /// 启用 SIMD 加速（默认关闭）
+    pub fn use_simd(mut self, enable: bool) -> Self {
+        self.use_simd = enable;
         self
     }
 
@@ -423,7 +432,7 @@ impl Mp3Encoder {
             samplerate: config.sample_rate as i32,
         };
 
-        Ok(ShineConfig { wave, mpeg })
+        Ok(ShineConfig { wave, mpeg, use_simd: config.use_simd })
     }
 }
 

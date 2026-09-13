@@ -8,9 +8,11 @@
 //! in ref/shine/src/lib/l3loop.c
 
 use crate::huffman::SHINE_HUFFMAN_TABLE;
+use crate::simd::{labs_i32x4, mulsr_i32x4};
 use crate::tables::{SHINE_SCALE_FACT_BAND_INDEX, SHINE_SLEN1_TAB, SHINE_SLEN2_TAB};
 use crate::types::{GrInfo, ShineGlobalConfig, ShinePsyXmin, GRANULE_SIZE};
 use std::f64::consts::LN_2;
+use wide::i32x4;
 
 /// Constants from shine (matches l3loop.c exactly)
 #[allow(dead_code)] // May be used in future implementations
@@ -182,14 +184,40 @@ pub fn shine_iteration_loop(config: &mut ShineGlobalConfig) {
             ix = config.l3_enc[ch as usize][gr as usize].as_mut_ptr();
             config.l3loop.xr = config.mdct_freq[ch as usize][gr as usize].as_ptr() as *mut i32;
 
-            // Precalculate the square, abs, and maximum, for use later on.
+            // Precalculate the square, abs, and maximum
             config.l3loop.xrmax = 0;
-            for i in 0..GRANULE_SIZE {
-                let xr_val = unsafe { *config.l3loop.xr.add(i) };
-                config.l3loop.xrsq[i] = mulsr(xr_val, xr_val);
-                config.l3loop.xrabs[i] = labs(xr_val);
-                if config.l3loop.xrabs[i] > config.l3loop.xrmax {
-                    config.l3loop.xrmax = config.l3loop.xrabs[i];
+            if config.use_simd {
+                // SIMD path: process 4 lanes per iteration
+                let xr_ptr = config.l3loop.xr;
+                for i in (0..GRANULE_SIZE).step_by(4) {
+                    let xr = i32x4::new([
+                        unsafe { *xr_ptr.add(i) },
+                        unsafe { *xr_ptr.add(i + 1) },
+                        unsafe { *xr_ptr.add(i + 2) },
+                        unsafe { *xr_ptr.add(i + 3) },
+                    ]);
+                    let xrsq = mulsr_i32x4(xr, xr);
+                    let xrabs = labs_i32x4(xr);
+                    let abs_arr: [i32; 4] = xrabs.to_array();
+                    let sq_arr: [i32; 4] = xrsq.to_array();
+                    for j in 0..4 {
+                        config.l3loop.xrsq[i + j] = sq_arr[j];
+                        config.l3loop.xrabs[i + j] = abs_arr[j];
+                    }
+                    let lane_max = abs_arr[0].max(abs_arr[1]).max(abs_arr[2]).max(abs_arr[3]);
+                    if lane_max > config.l3loop.xrmax {
+                        config.l3loop.xrmax = lane_max;
+                    }
+                }
+            } else {
+                // Scalar path (default, matches reference exactly)
+                for i in 0..GRANULE_SIZE {
+                    let xr_val = unsafe { *config.l3loop.xr.add(i) };
+                    config.l3loop.xrsq[i] = mulsr(xr_val, xr_val);
+                    config.l3loop.xrabs[i] = labs(xr_val);
+                    if config.l3loop.xrabs[i] > config.l3loop.xrmax {
+                        config.l3loop.xrmax = config.l3loop.xrabs[i];
+                    }
                 }
             }
 

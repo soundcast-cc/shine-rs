@@ -112,6 +112,7 @@ mod tests {
                 copyright: 0,
                 original: 1,
             },
+            use_simd: false,
         };
 
         let result = shine_initialise(&pub_config);

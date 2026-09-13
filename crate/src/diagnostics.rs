@@ -507,12 +507,13 @@ impl Encoder {
                 samplerate: encoding_config.sample_rate,
             },
             mpeg: ShineMpeg {
-                mode: if encoding_config.channels == 1 { 3 } else { 1 }, // MPG_MD_MONO or MPG_MD_STEREO
+                mode: if encoding_config.channels == 1 { 3 } else { 1 },
                 bitr: encoding_config.bitrate,
                 emph: 0,
                 copyright: 0,
                 original: 1,
             },
+            use_simd: false,
         };
 
         // Initialize encoder

@@ -14,7 +14,7 @@ pub fn labs_i32x4(x: i32x4) -> i32x4 {
 /// Widening multiply i32→i64, add rounding, shift right 32, narrow to i32.
 #[inline]
 pub fn mulr_i32x4(a: i32x4, b: i32x4) -> i32x4 {
-    let wide: i64x4 = a.mul_widen(b);
+    let wide: i64x4 = a.widening_mul(b);
     let r: i64x4 = (wide + i64x4::splat(0x80000000i64)) >> 32;
     narrow_i64x4_to_i32x4(r)
 }
@@ -22,7 +22,7 @@ pub fn mulr_i32x4(a: i32x4, b: i32x4) -> i32x4 {
 /// SIMD version of `mulsr`: `(((a * b) + 0x40000000) >> 31) as i32` for 4 lanes.
 #[inline]
 pub fn mulsr_i32x4(a: i32x4, b: i32x4) -> i32x4 {
-    let wide: i64x4 = a.mul_widen(b);
+    let wide: i64x4 = a.widening_mul(b);
     let r: i64x4 = (wide + i64x4::splat(0x40000000i64)) >> 31;
     narrow_i64x4_to_i32x4(r)
 }

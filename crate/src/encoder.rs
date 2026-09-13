@@ -87,6 +87,8 @@ impl Default for ShineMpeg {
 pub struct ShineConfig {
     pub wave: ShineWave,
     pub mpeg: ShineMpeg,
+    /// Enable SIMD-accelerated quantization precalculation (default: false)
+    pub use_simd: bool,
 }
 
 /// Set default values for important vars (matches shine_set_config_mpeg_defaults)
@@ -181,6 +183,7 @@ pub fn shine_initialise(pub_config: &ShineConfig) -> EncodingResult<Box<ShineGlo
     config.mpeg.emph = pub_config.mpeg.emph;
     config.mpeg.copyright = pub_config.mpeg.copyright;
     config.mpeg.original = pub_config.mpeg.original;
+    config.use_simd = pub_config.use_simd;
 
     // Set default values
     config.resv_max = 0;

@@ -31,6 +31,7 @@ struct Args {
     copyright: bool,
     quiet: bool,
     verbose: bool,
+    use_simd: bool,
 }
 
 impl Args {
@@ -48,6 +49,7 @@ impl Args {
         let mut copyright = false;
         let mut quiet = false;
         let mut verbose = false;
+        let mut use_simd = false;
 
         let mut i = 1;
 
@@ -96,6 +98,10 @@ impl Args {
                     verbose = true;
                     quiet = false;
                 }
+                's' => {
+                    // SIMD-accelerated quantization precalculation
+                    use_simd = true;
+                }
                 'h' => {
                     // Help
                     return Err("".to_string()); // Empty error triggers usage display
@@ -136,6 +142,7 @@ impl Args {
             copyright,
             quiet,
             verbose,
+            use_simd,
         })
     }
 }
@@ -155,6 +162,7 @@ fn print_usage() {
     println!(" -d            encode in dual-channel (stereo data only)");
     println!(" -q            quiet mode");
     println!(" -v            verbose mode");
+    println!(" -s            enable SIMD-accelerated quantization (optional, default off)");
 }
 
 /// Print program name (matches shine's output)
@@ -210,6 +218,7 @@ fn convert_wav_to_mp3(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             copyright: if args.copyright { 1 } else { 0 },
             original: 1,
         },
+        use_simd: args.use_simd,
     };
 
     // Set default MPEG values

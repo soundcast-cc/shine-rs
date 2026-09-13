@@ -308,6 +308,8 @@ pub struct ShineGlobalConfig {
     pub l3loop: L3Loop,
     pub mdct: Mdct,
     pub subband: Subband,
+    /// Enable SIMD-accelerated quantization precalculation
+    pub use_simd: bool,
 }
 
 impl ShineGlobalConfig {
@@ -355,6 +357,7 @@ impl ShineGlobalConfig {
             l3loop: L3Loop::default(),
             mdct: Mdct::default(),
             subband: Subband::default(),
+            use_simd: false,
         }
     }
 }
