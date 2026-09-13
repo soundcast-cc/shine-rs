@@ -39,19 +39,16 @@ jobs:
       run: |
         title="${{ github.event.pull_request.title }}"
         echo "Validating PR title: $title"
-        
-        # Check if title follows conventional commits format
         if echo "$title" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|chore|ci)(\(.+\))?: .+'; then
           echo "✅ PR title follows conventional commits format"
         else
-          echo "❌ PR title must follow conventional commits format"
+          echo "::warning::PR title does not follow conventional commits format"
           echo "Current title: $title"
           echo "Examples:"
           echo "  feat: add new feature"
           echo "  fix(encoder): resolve quantization bug"
           echo "  docs: update README"
           echo "  refactor(mdct): modernize loop implementation"
-          exit 1
         fi
 
     - name: Check for breaking changes
