@@ -160,8 +160,6 @@ cargo run --release tests/audio/inputs/basic/sample-3s.wav output.mp3
 
 ## Performance
 
-### 性能优势
-
 #### Benchmark Results (Shine-RS vs Shine C)
 
 Using high-precision internal timing (excludes process startup and I/O):
