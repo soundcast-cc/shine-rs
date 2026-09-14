@@ -9,21 +9,6 @@ A pure Rust MP3 encoder implementation based on the Shine library. This project 
 [![License: LGPL-2.0](https://img.shields.io/badge/License-LGPL%202.0-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
 
-## Table of Contents
-
-- [Features](#features)
-- [Supported Formats](#supported-formats)
-- [Quick Start](#quick-start)
-- [Project Structure](#project-structure)
-- [Development Status](#development-status)
-- [Build & Test](#build--test)
-- [Performance](#performance)
-- [Compatibility](#compatibility)
-- [Documentation](#documentation)
-- [License](#license)
-- [Contributing](#contributing)
-- [Acknowledgments](#acknowledgments)
-
 ## Features
 
 - 🦀 **Pure Rust** — memory-safe and performant
@@ -99,7 +84,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-> See [High-Level API Guide](docs/HIGH_LEVEL_API.md) for advanced usage.
+> 💡 See [High-Level API Guide](docs/HIGH_LEVEL_API.md) for advanced usage.
 
 ## Project Structure
 
@@ -175,25 +160,27 @@ cargo run --release tests/audio/inputs/basic/sample-3s.wav output.mp3
 
 ## Performance
 
-### 📊 Benchmark Results (Shine-RS vs Shine C)
+### 性能优势
+
+#### Benchmark Results (Shine-RS vs Shine C)
 
 Using high-precision internal timing (excludes process startup and I/O):
 
 | Bitrate | Shine-RS | Shine C | Ratio |
 |---------|----------|---------|-------|
-| 📊 128kbps | 106.2x  | 138.1x  | 0.77x |
-| 📊 192kbps | 116.0x  | 129.8x  | 0.89x |
-| 📊 320kbps | 120.0x  | 123.5x  | **0.97x** |
+| 128kbps | 106.2x  | 138.1x  | 0.77x |
+| 192kbps | 116.0x  | 129.8x  | 0.89x |
+| 320kbps | 120.0x  | 123.5x  | **0.97x** |
 
-**Overall**: 🚀 Shine-RS 114.1x vs Shine 130.4x — only **14%** gap.
+**Overall**: Shine-RS 114.1x vs Shine 130.4x — only **14%** gap.
 
 ## Compatibility
 
 Generated MP3 files are compatible with:
-- 🎵 FFmpeg/libmp3lame
-- 🪟 Windows Media Player
-- 🎬 VLC Media Player
-- 📱 All standard MP3 players
+- FFmpeg/libmp3lame
+- Windows Media Player
+- VLC Media Player
+- All standard MP3 players
 
 ## Documentation
 
