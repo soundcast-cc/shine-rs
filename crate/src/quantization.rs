@@ -708,6 +708,9 @@ pub fn subdivide_with_samplerate(cod_info: &mut GrInfo, samplerate: i32) {
         // no big_values region
         cod_info.region0_count = 0;
         cod_info.region1_count = 0;
+        cod_info.address1 = 0;
+        cod_info.address2 = 0;
+        cod_info.address3 = 0;
     } else {
         let samplerate_index = match samplerate {
             44100 => 0,

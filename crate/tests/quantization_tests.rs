@@ -86,4 +86,21 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_region_addresses_reset_without_big_values() {
+        let mut gr_info = GrInfo {
+            big_values: 100,
+            ..GrInfo::default()
+        };
+        shine_rs::quantization::subdivide_with_samplerate(&mut gr_info, 48_000);
+        assert!(gr_info.address1 > 0 && gr_info.address2 > 0 && gr_info.address3 > 0);
+
+        gr_info.big_values = 0;
+        shine_rs::quantization::subdivide_with_samplerate(&mut gr_info, 48_000);
+        assert_eq!(
+            (gr_info.address1, gr_info.address2, gr_info.address3),
+            (0, 0, 0)
+        );
+    }
 }
