@@ -67,4 +67,23 @@ mod tests {
             "Global gain should fit in 8 bits"
         );
     }
+
+    #[test]
+    fn test_region_addresses_stay_inside_big_values_region() {
+        for samplerate in [32_000, 44_100, 48_000] {
+            for big_values in 1..=288 {
+                let mut gr_info = GrInfo {
+                    big_values,
+                    ..GrInfo::default()
+                };
+                shine_rs::quantization::subdivide_with_samplerate(&mut gr_info, samplerate);
+                assert!(
+                    gr_info.address1 <= 2 * big_values && gr_info.address2 <= 2 * big_values,
+                    "samplerate {samplerate}, big_values {big_values}: address1 {}, address2 {}",
+                    gr_info.address1,
+                    gr_info.address2
+                );
+            }
+        }
+    }
 }
